@@ -25,7 +25,7 @@ This project helps you stay informed about the investment decisions of Berkshire
 
 ---
 
-## 📸 Demo
+## Demo
 
 > [Insert screenshot or Loom video/GIF of your Streamlit app here once built]
 
@@ -57,3 +57,14 @@ pip install -r requirements.txt
 
 # 4. Run the Streamlit app
 streamlit run app/ui.py
+
+## Project Structure
+berkshire-stock-tracker/
+│
+├── app/                 # Streamlit interface
+├── src/                 # Core logic
+├── data/                # Data storage
+├── main.py              # App launcher
+├── requirements.txt     # Python dependencies
+└── README.md            # Project documentation
+
