@@ -58,6 +58,8 @@ pip install -r requirements.txt
 # 4. Run the Streamlit app
 streamlit run app/ui.py
 
+---
+
 ## Project Structure
 berkshire-stock-tracker/
 │
