@@ -137,7 +137,7 @@ if df_latest is not None and not df_latest.empty:
         changes["valuePctChange"] = changes["valuePctChange"].fillna(-100)
 
         total_change = changes["valueChange"].sum()
-        st.metric("Total Portfolio Value Change ($B)", f"{total_change / 1e9:.2f}")
+        st.metric("hello", f"{total_change / 1e9:.2f}")
 
         filtered = changes.copy()
         if show_new_dropped:
