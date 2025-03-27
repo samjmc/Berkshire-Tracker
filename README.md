@@ -56,7 +56,8 @@ source venv/bin/activate  # or venv\Scripts\activate on Windows
 pip install -r requirements.txt
 
 # 4. Run the Streamlit app
-streamlit run app/ui.py
+streamlit run app.py
+
 
 ---
 
