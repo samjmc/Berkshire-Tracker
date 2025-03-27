@@ -2,6 +2,8 @@
 
 Get real-time updates when Berkshire Hathaway makes a move. This project tracks their latest 13F filings (institutional investment disclosures) using the SEC EDGAR API and presents them in a simple, interactive dashboard.
 
+Launch the app here: https://berkshire-tracker.streamlit.app/ 
+
 ---
 
 ## Project Overview
@@ -20,14 +22,6 @@ This project helps you stay informed about the investment decisions of Berkshire
 -Live fetching of latest 13F filings
 -Clean data parsing logic
 -Streamlit web UI
-- Modular codebase
-- 🔔 (Coming soon) Email alerts for changes
-
----
-
-## Demo
-
-> [Insert screenshot or Loom video/GIF of your Streamlit app here once built]
 
 ---
 
