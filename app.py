@@ -136,13 +136,14 @@ if df_latest is not None and not df_latest.empty:
         changes["is_dropped"] = changes["value ($1000s)_latest"].isna()
         changes["valuePctChange"] = changes["valuePctChange"].fillna(-100)
 
-        # ✅ Fix: Group by cusip to avoid inflated total
+     # ✅ Fix: Group by cusip + issuer to avoid inflated total
         grouped_changes = (
-            changes.groupby("cusip", as_index=False)
+            changes.groupby(["cusip", "nameOfIssuer_latest"], as_index=False)
             .agg({"valueChange": "sum"})
         )
         total_change = grouped_changes["valueChange"].sum()
         st.metric("Total Portfolio Value Change ($1000s)", f"{total_change:,.0f}")
+
 
         filtered = changes.copy()
         if show_new_dropped:
