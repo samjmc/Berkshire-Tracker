@@ -96,6 +96,7 @@ def compare_holdings(df1, df2):
 
     return merged.sort_values("valueChange", ascending=False)
 
+
 # --- Streamlit App ---
 st.set_page_config(page_title="Berkshire Hathaway 13F Tracker", layout="wide")
 st.title("📈 Berkshire Hathaway Holdings (13F Filing)")
@@ -143,12 +144,28 @@ if df_latest is not None and not df_latest.empty:
         if show_new_dropped:
             filtered = filtered[filtered["is_new"] | filtered["is_dropped"]]
 
+        # Rename columns just for display (optional)
+        display_df = filtered.rename(columns={
+            "value ($)_latest": "Value ($) - Latest",
+            "value ($)_previous": "Value ($) - Previous",
+            "valueChange": "Change ($)",
+            "valuePctChange": "Change (%)",
+            "shares_latest": "Shares - Latest",
+            "shares_previous": "Shares - Previous",
+            "shareChange": "Change (Shares)",
+            "sharePctChange": "Change (%) - Shares",
+            "valueTrend": "Value Trend",
+            "shareTrend": "Share Trend",
+            "nameOfIssuer_latest": "Issuer (Latest)",
+            "nameOfIssuer_previous": "Issuer (Previous)"
+        })
+
         st.dataframe(
-            filtered[
+            display_df[
                 [
-                    'nameOfIssuer_latest', 'nameOfIssuer_previous', 'cusip',
-                    'value ($)_latest', 'value ($)_previous', 'valueChange', 'valuePctChange', 'valueTrend',
-                    'shares_latest', 'shares_previous', 'shareChange', 'sharePctChange', 'shareTrend'
+                    "Issuer (Latest)", "Issuer (Previous)", "cusip",
+                    "Value ($) - Latest", "Value ($) - Previous", "Change ($)", "Change (%)", "Value Trend",
+                    "Shares - Latest", "Shares - Previous", "Change (Shares)", "Change (%) - Shares", "Share Trend"
                 ]
             ],
             use_container_width=True
@@ -159,3 +176,4 @@ else:
     st.error("❌ Could not load latest holdings data.")
 
 st.caption("Data Source: SEC EDGAR")
+
