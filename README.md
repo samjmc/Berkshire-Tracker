@@ -13,7 +13,7 @@ This project helps you stay informed about the investment decisions of Berkshire
 - Fetches Berkshire Hathaway’s latest 13F filings from the SEC
 - Displays filing details in a user-friendly interface
 - Can be extended to trigger alerts for stock buys/sells
-- Demonstrates practical use of APIs, data wrangling, and dashboard creation
+- Demonstrates practical use of APIs, data wrangling, and Streamlit dashboard creation
 
 ---
 
@@ -55,13 +55,5 @@ streamlit run app.py
 
 ---
 
-## Project Structure
-berkshire-stock-tracker/
-│
-├── app/                 # Streamlit interface
-├── src/                 # Core logic
-├── data/                # Data storage
-├── main.py              # App launcher
-├── requirements.txt     # Python dependencies
-└── README.md            # Project documentation
+
 
