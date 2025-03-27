@@ -169,7 +169,7 @@ if df_latest is not None and not df_latest.empty:
 
         changes["is_new"] = changes["Value ($) - Previous"].isna()
         changes["is_dropped"] = changes["Value ($) - Latest"].isna()
-        changes["Change (%)"] = changes["Change (%)"].fillna(-100)
+        changes["Change (%)"] = changes["Change (%)"].where(~changes["is_new"])
 
         total_change = changes["Change ($)"].sum()
         st.metric("Total Portfolio Value Change ($B)", f"{total_change / 1e9:.2f}")
