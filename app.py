@@ -141,8 +141,20 @@ if df_latest is not None and not df_latest.empty:
             changes.groupby(["cusip", "nameOfIssuer_latest"], as_index=False)
             .agg({"valueChange": "sum"})
         )
-        total_change = grouped_changes["valueChange"].sum()
-        st.metric("Total Portfolio Value Change ($1000s)", f"{total_change:,.0f}")
+        # 🛠 Fix: Accurately compute total portfolio value change by grouping on CUSIP only
+    portfolio_change = (
+        changes.groupby("cusip", as_index=False)
+        .agg({
+            "value ($1000s)_latest": "first",
+            "value ($1000s)_previous": "first"
+        })
+    )
+
+    portfolio_change["valueChange"] = portfolio_change["value ($1000s)_latest"].fillna(0) - portfolio_change["value ($1000s)_previous"].fillna(0)
+    total_change = portfolio_change["valueChange"].sum()
+
+    st.metric("Total Portfolio Value Change ($1000s)", f"{total_change:,.0f}")
+
 
 
         filtered = changes.copy()
