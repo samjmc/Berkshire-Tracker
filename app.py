@@ -53,7 +53,7 @@ def parse_13f_xml(xml_url):
             row = {
                 "nameOfIssuer": info.findtext("ns:nameOfIssuer", default="", namespaces=ns),
                 "cusip": info.findtext("ns:cusip", default="", namespaces=ns),
-                "value ($1000s)": int(info.findtext("ns:value", default="0", namespaces=ns)),
+                "value ($)": int(info.findtext("ns:value", default="0", namespaces=ns)),
                 "shares": int(info.find("ns:shrsOrPrnAmt/ns:sshPrnamt", ns).text or 0),
                 "investmentDiscretion": info.findtext("ns:investmentDiscretion", default="", namespaces=ns),
                 "votingAuthority (Sole)": int(info.find("ns:votingAuthority/ns:Sole", ns).text or 0)
@@ -81,10 +81,10 @@ def load_data():
 
 def compare_holdings(df1, df2):
     merged = pd.merge(df1, df2, on="cusip", how="outer", suffixes=("_latest", "_previous"))
-    merged["valueChange"] = merged["value ($1000s)_latest"].fillna(0) - merged["value ($1000s)_previous"].fillna(0)
+    merged["valueChange"] = merged["value ($)_latest"].fillna(0) - merged["value ($)_previous"].fillna(0)
     merged["shareChange"] = merged["shares_latest"].fillna(0) - merged["shares_previous"].fillna(0)
 
-    merged["valuePctChange"] = (merged["valueChange"] / merged["value ($1000s)_previous"].replace(0, pd.NA)) * 100
+    merged["valuePctChange"] = (merged["valueChange"] / merged["value ($)_previous"].replace(0, pd.NA)) * 100
     merged["sharePctChange"] = (merged["shareChange"] / merged["shares_previous"].replace(0, pd.NA)) * 100
 
     def trend_icon(val):
@@ -105,19 +105,19 @@ df_latest, df_previous = load_data()
 if df_latest is not None and not df_latest.empty:
     col1, col2 = st.columns(2)
     col1.metric("🧾 Stocks Tracked", len(df_latest))
-    col2.metric("💼 Portfolio Value ($B)", f"{df_latest['value ($1000s)'].sum() / 1e3:.2f}")
+    col2.metric("💼 Portfolio Value ($B)", f"{df_latest['value ($)'].sum() / 1e9:.2f}")
 
     N = st.slider("Top N holdings", 5, 50, 10)
 
     top = (
         df_latest.groupby(["cusip", "nameOfIssuer"], as_index=False)
         .agg({
-            "value ($1000s)": "sum",
+            "value ($)": "sum",
             "shares": "sum",
             "investmentDiscretion": "first",
             "votingAuthority (Sole)": "sum"
         })
-        .sort_values("value ($1000s)", ascending=False)
+        .sort_values("value ($)", ascending=False)
         .head(N)
     )
 
@@ -132,30 +132,12 @@ if df_latest is not None and not df_latest.empty:
 
         show_new_dropped = st.checkbox("📛 Show Only New / Dropped Positions", value=True)
 
-        changes["is_new"] = changes["value ($1000s)_previous"].isna()
-        changes["is_dropped"] = changes["value ($1000s)_latest"].isna()
+        changes["is_new"] = changes["value ($)_previous"].isna()
+        changes["is_dropped"] = changes["value ($)_latest"].isna()
         changes["valuePctChange"] = changes["valuePctChange"].fillna(-100)
 
-     # ✅ Fix: Group by cusip + issuer to avoid inflated total
-        grouped_changes = (
-            changes.groupby(["cusip", "nameOfIssuer_latest"], as_index=False)
-            .agg({"valueChange": "sum"})
-        )
-        # 🛠 Fix: Accurately compute total portfolio value change by grouping on CUSIP only
-    portfolio_change = (
-        changes.groupby("cusip", as_index=False)
-        .agg({
-            "value ($1000s)_latest": "first",
-            "value ($1000s)_previous": "first"
-        })
-    )
-
-    portfolio_change["valueChange"] = portfolio_change["value ($1000s)_latest"].fillna(0) - portfolio_change["value ($1000s)_previous"].fillna(0)
-    total_change = portfolio_change["valueChange"].sum()
-
-    st.metric("Total Portfolio Value Change ($1000s)", f"{total_change:,.0f}")
-
-
+        total_change = changes["valueChange"].sum()
+        st.metric("Total Portfolio Value Change ($B)", f"{total_change / 1e9:.2f}")
 
         filtered = changes.copy()
         if show_new_dropped:
@@ -165,7 +147,7 @@ if df_latest is not None and not df_latest.empty:
             filtered[
                 [
                     'nameOfIssuer_latest', 'nameOfIssuer_previous', 'cusip',
-                    'value ($1000s)_latest', 'value ($1000s)_previous', 'valueChange', 'valuePctChange', 'valueTrend',
+                    'value ($)_latest', 'value ($)_previous', 'valueChange', 'valuePctChange', 'valueTrend',
                     'shares_latest', 'shares_previous', 'shareChange', 'sharePctChange', 'shareTrend'
                 ]
             ],
@@ -177,4 +159,3 @@ else:
     st.error("❌ Could not load latest holdings data.")
 
 st.caption("Data Source: SEC EDGAR")
-
