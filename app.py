@@ -8,6 +8,7 @@ from bs4 import BeautifulSoup
 CIK = "0001067983"
 HEADERS = {"User-Agent": "Samuel McDonnell (samuel.mcdonnell@example.com)"}
 
+
 def fetch_berkshire_filings():
     url = f"https://data.sec.gov/submissions/CIK{CIK}.json"
     res = requests.get(url, headers=HEADERS)
@@ -21,6 +22,7 @@ def fetch_berkshire_filings():
             filings.append({"accession": acc_num, "url": detail_url, "accession_clean": acc_clean})
     return filings
 
+
 def get_info_table_url(filing):
     try:
         index_url = filing['url']
@@ -30,17 +32,15 @@ def get_info_table_url(filing):
             name = file.get("name", "")
             if name.endswith(".xml"):
                 file_url = f"https://www.sec.gov/Archives/edgar/data/{CIK}/{filing['accession_clean']}/{name}"
-                try:
-                    content = requests.get(file_url, headers=HEADERS).content
-                    if b"<informationTable" in content:
-                        return file_url
-                except:
-                    continue
+                content = requests.get(file_url, headers=HEADERS).content
+                if b"<informationTable" in content:
+                    return file_url
         st.warning("⚠️ Could not find infotable XML on the filing detail page.")
         return None
     except Exception as e:
         st.error(f"Error loading filing detail JSON: {e}")
         return None
+
 
 def parse_13f_xml(xml_url):
     try:
@@ -64,26 +64,47 @@ def parse_13f_xml(xml_url):
         st.warning(f"⚠️ Error parsing XML: {e}")
         return pd.DataFrame()
 
+
 @st.cache_data
 def load_data():
     filings = fetch_berkshire_filings()
     if len(filings) < 2:
         st.error("❌ Not enough filings found to compare.")
         return None, None
-
     latest, previous = filings[0], filings[1]
     xml_url_1 = get_info_table_url(latest)
     xml_url_2 = get_info_table_url(previous)
-
     df_latest = parse_13f_xml(xml_url_1) if xml_url_1 else pd.DataFrame()
     df_previous = parse_13f_xml(xml_url_2) if xml_url_2 else pd.DataFrame()
     return df_latest, df_previous
 
+
 def compare_holdings(df1, df2):
-    merged = pd.merge(df1, df2, on="cusip", how="outer", suffixes=("_latest", "_previous"))
+    # Group to avoid repeated issuers
+    df1_grouped = df1.groupby(["cusip", "nameOfIssuer"], as_index=False).agg({
+        "value ($)": "sum",
+        "shares": "sum",
+        "investmentDiscretion": "first",
+        "votingAuthority (Sole)": "sum"
+    })
+
+    df2_grouped = df2.groupby(["cusip", "nameOfIssuer"], as_index=False).agg({
+        "value ($)": "sum",
+        "shares": "sum",
+        "investmentDiscretion": "first",
+        "votingAuthority (Sole)": "sum"
+    })
+
+    merged = pd.merge(
+        df1_grouped,
+        df2_grouped,
+        on="cusip",
+        how="outer",
+        suffixes=("_latest", "_previous")
+    )
+
     merged["valueChange"] = merged["value ($)_latest"].fillna(0) - merged["value ($)_previous"].fillna(0)
     merged["shareChange"] = merged["shares_latest"].fillna(0) - merged["shares_previous"].fillna(0)
-
     merged["valuePctChange"] = (merged["valueChange"] / merged["value ($)_previous"].replace(0, pd.NA)) * 100
     merged["sharePctChange"] = (merged["shareChange"] / merged["shares_previous"].replace(0, pd.NA)) * 100
 
@@ -94,7 +115,20 @@ def compare_holdings(df1, df2):
     merged["valueTrend"] = merged["valueChange"].apply(trend_icon)
     merged["shareTrend"] = merged["shareChange"].apply(trend_icon)
 
-    return merged.sort_values("valueChange", ascending=False)
+    merged = merged.rename(columns={
+        "nameOfIssuer_latest": "Issuer (Latest)",
+        "nameOfIssuer_previous": "Issuer (Previous)",
+        "value ($)_latest": "Value ($) - Latest",
+        "value ($)_previous": "Value ($) - Previous",
+        "valueChange": "Change ($)",
+        "valuePctChange": "Change (%)",
+        "shares_latest": "Shares - Latest",
+        "shares_previous": "Shares - Previous",
+        "shareChange": "Change (Shares)",
+        "sharePctChange": "Change (%) - Shares"
+    })
+
+    return merged.sort_values("Change ($)", ascending=False)
 
 
 # --- Streamlit App ---
@@ -133,39 +167,23 @@ if df_latest is not None and not df_latest.empty:
 
         show_new_dropped = st.checkbox("📛 Show Only New / Dropped Positions", value=True)
 
-        changes["is_new"] = changes["value ($)_previous"].isna()
-        changes["is_dropped"] = changes["value ($)_latest"].isna()
-        changes["valuePctChange"] = changes["valuePctChange"].fillna(-100)
+        changes["is_new"] = changes["Value ($) - Previous"].isna()
+        changes["is_dropped"] = changes["Value ($) - Latest"].isna()
+        changes["Change (%)"] = changes["Change (%)"].fillna(-100)
 
-        total_change = changes["valueChange"].sum()
+        total_change = changes["Change ($)"].sum()
         st.metric("Total Portfolio Value Change ($B)", f"{total_change / 1e9:.2f}")
 
         filtered = changes.copy()
         if show_new_dropped:
             filtered = filtered[filtered["is_new"] | filtered["is_dropped"]]
 
-        # Rename columns just for display (optional)
-        display_df = filtered.rename(columns={
-            "value ($)_latest": "Value ($) - Latest",
-            "value ($)_previous": "Value ($) - Previous",
-            "valueChange": "Change ($)",
-            "valuePctChange": "Change (%)",
-            "shares_latest": "Shares - Latest",
-            "shares_previous": "Shares - Previous",
-            "shareChange": "Change (Shares)",
-            "sharePctChange": "Change (%) - Shares",
-            "valueTrend": "Value Trend",
-            "shareTrend": "Share Trend",
-            "nameOfIssuer_latest": "Issuer (Latest)",
-            "nameOfIssuer_previous": "Issuer (Previous)"
-        })
-
         st.dataframe(
-            display_df[
+            filtered[
                 [
                     "Issuer (Latest)", "Issuer (Previous)", "cusip",
-                    "Value ($) - Latest", "Value ($) - Previous", "Change ($)", "Change (%)", "Value Trend",
-                    "Shares - Latest", "Shares - Previous", "Change (Shares)", "Change (%) - Shares", "Share Trend"
+                    "Value ($) - Latest", "Value ($) - Previous", "Change ($)", "Change (%)", "valueTrend",
+                    "Shares - Latest", "Shares - Previous", "Change (Shares)", "Change (%) - Shares", "shareTrend"
                 ]
             ],
             use_container_width=True
@@ -176,4 +194,3 @@ else:
     st.error("❌ Could not load latest holdings data.")
 
 st.caption("Data Source: SEC EDGAR")
-
