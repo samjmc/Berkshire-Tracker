@@ -136,7 +136,12 @@ if df_latest is not None and not df_latest.empty:
         changes["is_dropped"] = changes["value ($1000s)_latest"].isna()
         changes["valuePctChange"] = changes["valuePctChange"].fillna(-100)
 
-        total_change = changes["valueChange"].sum()
+        # ✅ Fix: Group by cusip to avoid inflated total
+        grouped_changes = (
+            changes.groupby("cusip", as_index=False)
+            .agg({"valueChange": "sum"})
+        )
+        total_change = grouped_changes["valueChange"].sum()
         st.metric("Total Portfolio Value Change ($1000s)", f"{total_change:,.0f}")
 
         filtered = changes.copy()
@@ -159,3 +164,4 @@ else:
     st.error("❌ Could not load latest holdings data.")
 
 st.caption("Data Source: SEC EDGAR")
+
